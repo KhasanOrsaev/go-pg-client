@@ -1,0 +1,9 @@
+host: localhost
+user: pguser
+password: 123
+database: cs
+queries:
+  - query: insert into cs_events.events(user_id, type, source, data) values %s
+    prepare_statement: (?,?,?,?)
+workers: 3
+bulk: 20
