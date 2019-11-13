@@ -2,7 +2,7 @@ package dwh_client_git
 
 import (
 	"encoding/json"
-	"errors"
+	"github.com/go-errors/errors"
 	"github.com/lib/pq"
 	"sync"
 )
@@ -35,7 +35,7 @@ func (client *DWH) WriteData(outChannel <- chan map[interface{}][]byte, confirmC
 					if err!=nil {
 						confirmChannel <- i
 						crashChannel <- v
-						errChannel <- err
+						errChannel <- errors.Wrap(err, -1)
 						continue
 					}
 
@@ -72,40 +72,40 @@ func toCrashChannel(requests []Request, crashChannel chan <- []byte) {
 func (client *DWH) sendToDB(requests []Request, crashChannel chan <- []byte, errChannel chan <- error)  {
 	txn, err := client.DB.Begin()
 	if err != nil {
-		errChannel <- err
+		errChannel <- errors.Wrap(err, -1)
 		toCrashChannel(requests, crashChannel)
 		return
 	}
 	stmt, err := txn.Prepare(pq.CopyInSchema("cs_events","events", "user_id", "type", "source", "data"))
 	if err != nil {
-		errChannel <- err
+		errChannel <- errors.Wrap(err, -1)
 		toCrashChannel(requests, crashChannel)
 		return
 	}
 	for _, request := range requests {
 		_, err = stmt.Exec(request.UserID, request.Type, request.Source, request.Data)
 		if err != nil {
-			errChannel <- err
+			errChannel <- errors.Wrap(err, -1)
 			toCrashChannel(requests, crashChannel)
 			return
 		}
 	}
 	_, err = stmt.Exec()
 	if err != nil {
-		errChannel <- err
+		errChannel <- errors.Wrap(err, -1)
 		toCrashChannel(requests, crashChannel)
 		return
 	}
 	err = stmt.Close()
 	if err != nil {
-		errChannel <- err
+		errChannel <- errors.Wrap(err, -1)
 		toCrashChannel(requests, crashChannel)
 		return
 	}
 
 	err = txn.Commit()
 	if err != nil {
-		errChannel <- err
+		errChannel <- errors.Wrap(err, -1)
 		toCrashChannel(requests, crashChannel)
 		return
 	}
